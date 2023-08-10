@@ -1,9 +1,14 @@
 {
   "tasks": [
     {
-      "label": "run",
+      "label": "run android",
       "type": "shell",
       "command": "cargo android run"
+    },
+    {
+      "label": "run",
+      "type": "shell",
+      "command": "cargo run"
     }
   ]
 }

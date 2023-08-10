@@ -1,3 +1,8 @@
+mod about;
+mod helper;
+mod ui;
+
+use ui::MainWindows;
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
@@ -75,7 +80,9 @@ fn _main(event_loop: EventLoop<Event>) {
         false,
     );
     let mut window: Option<winit::window::Window> = None;
-    let mut egui_demo_windows = egui_demo_lib::DemoWindows::default();
+
+    // let mut egui_demo_windows = egui_demo_lib::DemoWindows::default();
+    let mut main_windows = MainWindows::default();
 
     event_loop.run(move |event, event_loop, control_flow| match event {
         Resumed => match window {
@@ -95,7 +102,7 @@ fn _main(event_loop: EventLoop<Event>) {
                 let raw_input = state.take_egui_input(window);
 
                 let full_output = ctx.run(raw_input, |ctx| {
-                    egui_demo_windows.ui(ctx);
+                    main_windows.ui(ctx);
                 });
                 state.handle_platform_output(window, &ctx, full_output.platform_output);
 
