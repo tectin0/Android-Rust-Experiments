@@ -12,8 +12,8 @@ use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopWindo
 use egui_wgpu::winit::Painter;
 use egui_winit::State;
 
-const INITIAL_WIDTH: u32 = 1920;
-const INITIAL_HEIGHT: u32 = 1080;
+const INITIAL_WIDTH: u32 = 540;
+const INITIAL_HEIGHT: u32 = 1200;
 
 /// A custom event type for the winit app.
 enum Event {
@@ -31,7 +31,7 @@ fn create_window<T>(
 ) -> winit::window::Window {
     let window = winit::window::WindowBuilder::new()
         .with_decorations(true)
-        .with_resizable(true)
+        .with_resizable(false)
         .with_transparent(false)
         .with_title("egui winit + wgpu example")
         .with_inner_size(winit::dpi::PhysicalSize {
