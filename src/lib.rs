@@ -1,5 +1,7 @@
 mod about;
+mod dates;
 mod helper;
+mod home;
 mod ui;
 
 use ui::MainWindows;

@@ -1,29 +1,67 @@
-use egui::{CentralPanel, Context, Modifiers, Ui};
+use std::default;
+
+use egui::{
+    Button, CentralPanel, Context, FontId, Id, Modifiers, RichText, Separator, Style, TextStyle,
+    Ui, Vec2, WidgetText,
+};
+
+use egui::TextStyle::*;
+
+use egui::FontFamily::Proportional;
 
 use crate::{
     about::About,
+    dates::Dates,
     helper::{is_mobile, Demo, View},
+    home::Home,
 };
+
+#[derive(Default)]
+enum MainWindowState {
+    #[default]
+    Main,
+    Dates,
+}
 
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(default))]
 pub struct MainWindows {
-    about_is_open: bool,
+    main_window_state: MainWindowState,
+    home: Home,
+    dates: Dates,
     about: About,
+    is_about_open: bool,
 }
 
 impl Default for MainWindows {
     fn default() -> Self {
         Self {
-            about_is_open: true,
+            main_window_state: Default::default(),
+            home: Default::default(),
+            dates: Default::default(),
             about: Default::default(),
+            is_about_open: true,
         }
     }
 }
 
 impl MainWindows {
-    /// Show the app ui (menu bar and windows).
     pub fn ui(&mut self, ctx: &Context) {
+        let mut style = (*ctx.style()).clone();
+
+        style.text_styles = [
+            (Heading, FontId::new(30.0, Proportional)),
+            (Name("Heading2".into()), FontId::new(25.0, Proportional)),
+            (Name("Context".into()), FontId::new(23.0, Proportional)),
+            (Body, FontId::new(18.0, Proportional)),
+            (Monospace, FontId::new(14.0, Proportional)),
+            (Button, FontId::new(24.0, Proportional)),
+            (Small, FontId::new(10.0, Proportional)),
+        ]
+        .into();
+
+        ctx.set_style(style);
+
         if is_mobile(ctx) {
             self.mobile_ui(ctx);
         } else {
@@ -46,18 +84,48 @@ impl MainWindows {
 
     /// Show the about window.
     fn show_about(&mut self, ctx: &Context) {
-        self.about.show(ctx, &mut self.about_is_open);
+        self.about.show(ctx, &mut self.is_about_open);
+    }
+
+    fn bottom_bar(&mut self, ctx: &Context) {
+        let screen_size = ctx.input(|i| i.screen_rect.size());
+        let bottom_panel_height = screen_size.y / 10.0;
+        let button_width = screen_size.x / 3.0 - 5.0;
+
+        let bottom_panel =
+            egui::TopBottomPanel::bottom(Id::new("bottom_bar")).exact_height(bottom_panel_height);
+
+        bottom_panel.show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                let home_button = Button::new(RichText::new("Home"))
+                    .min_size(Vec2::new(button_width, bottom_panel_height));
+
+                ui.add(home_button).clicked().then(|| {
+                    self.main_window_state = MainWindowState::Main;
+                });
+
+                let dates_button =
+                    Button::new("Dates").min_size(Vec2::new(button_width, bottom_panel_height));
+
+                ui.add(dates_button).clicked().then(|| {
+                    self.main_window_state = MainWindowState::Dates;
+                });
+
+                let quit_button =
+                    Button::new("Quit").min_size(Vec2::new(button_width, bottom_panel_height));
+
+                ui.add(quit_button).clicked().then(|| std::process::exit(0));
+            });
+        });
     }
 
     fn show_main_gui(&mut self, ctx: &Context) {
-        CentralPanel::default().show(ctx, |ui| {
-            ui.vertical_centered_justified(|ui| {
-                ui.heading("Welcome to the Egui demo app!");
-                let button = ui
-                    .button("Quit")
-                    .on_hover_cursor(egui::CursorIcon::PointingHand);
+        self.bottom_bar(ctx);
 
-                button.clicked().then(|| std::process::exit(0));
+        CentralPanel::default().show(ctx, |ui| {
+            ui.vertical_centered_justified(|ui| match self.main_window_state {
+                MainWindowState::Main => self.home.ui(ui),
+                MainWindowState::Dates => self.dates.ui(ui),
             });
         });
     }
