@@ -1,4 +1,4 @@
-use egui::Key;
+use egui::{Color32, Key, TextEdit};
 
 use crate::helper::{Demo, View};
 
@@ -8,6 +8,7 @@ use crate::helper::{Demo, View};
 pub struct Dates {
     dates: Vec<String>,
     input: String,
+    input_field_color: Color32,
 }
 
 impl Demo for Dates {
@@ -38,16 +39,59 @@ impl View for Dates {
             });
         }
 
-        ui.text_edit_singleline(&mut self.input)
+        let input = TextEdit::singleline(&mut self.input).text_color(self.input_field_color);
+        let input_response = ui.add(input);
+
+        input_response.request_focus();
+
+        input_response
             .ctx
             .input(|i| i.key_pressed(Key::Enter))
             .then(|| {
                 self.dates.push(self.input.clone());
                 self.input.clear();
             });
+
+        input_response.changed().then(|| {
+            self.input_field_color = match check_if_valid_date(self.input.clone().as_str()) {
+                true => Color32::from_rgb(0, 255, 0),
+                false => Color32::from_rgb(255, 0, 0),
+            };
+            ui.ctx().request_repaint();
+        });
+
         ui.button("+").clicked().then(|| {
             self.dates.push(self.input.clone());
             self.input.clear();
         });
     }
+}
+
+fn check_if_valid_date(date: &str) -> bool {
+    let date = date.split('-').collect::<Vec<&str>>();
+    if date.len() != 3 {
+        return false;
+    }
+
+    let year = date[0].parse::<i32>();
+    let month = date[1].parse::<i32>();
+    let day = date[2].parse::<i32>();
+
+    if year.is_err() || month.is_err() || day.is_err() {
+        return false;
+    }
+
+    let year = year.unwrap();
+    let month = month.unwrap();
+    let day = day.unwrap();
+
+    if year < 0 || month < 0 || day < 0 {
+        return false;
+    }
+
+    if month > 12 || day > 31 {
+        return false;
+    }
+
+    true
 }
