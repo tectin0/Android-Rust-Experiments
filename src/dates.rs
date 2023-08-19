@@ -1,4 +1,5 @@
 use egui::{Color32, Key, TextEdit};
+use itertools::Itertools;
 
 use crate::helper::{Demo, View};
 
@@ -70,15 +71,15 @@ impl View for Dates {
             self.input.clear();
         });
 
-        ui.label(format!(
-            "Number of consecutive months: {}",
-            self.number_of_consecutive_months
-        ));
-
         if self.has_dates_changed {
             self.calculate_how_many_consecutive_months();
             self.has_dates_changed = false;
         }
+
+        ui.label(format!(
+            "Number of consecutive months: {}",
+            self.number_of_consecutive_months
+        ));
     }
 }
 
@@ -120,22 +121,22 @@ impl Dates {
 
         let dates_length = self.dates.len();
 
-        for date in self.dates.iter().rev() {
+        for (date, previous_date) in self.dates.iter().rev().tuple_windows() {
+            let previous_date = previous_date.split('-').collect::<Vec<&str>>();
             let date = date.split('-').collect::<Vec<&str>>();
-            let year = date[0].parse::<i32>().unwrap();
-            let month = date[1].parse::<i32>().unwrap();
-
-            let previous_date = self
-                .dates
-                .get(dates_length - conesecutive_months - 1)
-                .unwrap()
-                .split('-')
-                .collect::<Vec<&str>>();
 
             let previous_year = previous_date[0].parse::<i32>().unwrap();
             let previous_month = previous_date[1].parse::<i32>().unwrap();
 
-            if year == previous_year && month == previous_month {
+            let year = date[0].parse::<i32>().unwrap();
+            let month = date[1].parse::<i32>().unwrap();
+
+            let month_difference = month - previous_month;
+            let year_difference = year - previous_year;
+
+            if month_difference == 1 && year_difference == 0 {
+                conesecutive_months += 1;
+            } else if month_difference == -11 && year_difference == 1 {
                 conesecutive_months += 1;
             } else {
                 break;
