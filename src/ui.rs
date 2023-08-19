@@ -78,6 +78,7 @@ impl MainWindows {
     }
 
     fn desktop_ui(&mut self, ctx: &Context) {
+        self.home.number_of_consecutive_months = self.dates.number_of_consecutive_months;
         self.show_main_gui(ctx);
         self.show_about(ctx);
     }
