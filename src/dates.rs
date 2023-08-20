@@ -1,3 +1,4 @@
+use chrono::{Datelike, Local};
 use egui::{Color32, Key, TextEdit};
 use itertools::Itertools;
 
@@ -72,7 +73,8 @@ impl View for Dates {
         });
 
         if self.has_dates_changed {
-            self.calculate_how_many_consecutive_months();
+            self.sort_by_date();
+            self.calculate_consecutive_months();
             self.has_dates_changed = false;
         }
 
@@ -114,12 +116,33 @@ fn check_if_valid_date(date: &str) -> bool {
 
 impl Dates {
     /// Calculates in how many consecutive months the user has been active
-    fn calculate_how_many_consecutive_months(&mut self) {
+    fn calculate_consecutive_months(&mut self) {
         self.sort_by_date();
 
         let mut conesecutive_months = 0;
 
-        let dates_length = self.dates.len();
+        let current_date = Local::now();
+        let current_year = current_date.year();
+        let current_month = current_date.month() as i32;
+
+        let last_date = self.dates.last().unwrap();
+
+        let last_year = last_date.split('-').collect::<Vec<&str>>()[0];
+        let last_month = last_date.split('-').collect::<Vec<&str>>()[1];
+
+        let month_difference = current_month - last_month.parse::<i32>().unwrap();
+        let year_difference = current_year - last_year.parse::<i32>().unwrap();
+
+        if month_difference == 0 && year_difference == 0 {
+            conesecutive_months += 1;
+        } else if month_difference == 1 && year_difference == 0 {
+            conesecutive_months += 1;
+        } else if month_difference == -11 && year_difference == 1 {
+            conesecutive_months += 1;
+        } else {
+            self.number_of_consecutive_months = conesecutive_months;
+            return;
+        }
 
         for (date, previous_date) in self.dates.iter().rev().tuple_windows() {
             let previous_date = previous_date.split('-').collect::<Vec<&str>>();
@@ -134,6 +157,10 @@ impl Dates {
             let month_difference = month - previous_month;
             let year_difference = year - previous_year;
 
+            if month_difference == 0 && year_difference == 0 {
+                continue;
+            }
+
             if month_difference == 1 && year_difference == 0 {
                 conesecutive_months += 1;
             } else if month_difference == -11 && year_difference == 1 {
@@ -146,7 +173,20 @@ impl Dates {
         self.number_of_consecutive_months = conesecutive_months;
     }
 
-    fn sort_by_date(&self) {
+    fn calculate_how_many_dates_in_last_year(&mut self) {
+        self.sort_by_date();
+
+        let mut dates_in_last_year = 0;
+
+        for date in self.dates.iter().rev() {
+            let date = date.split('-').collect::<Vec<&str>>();
+
+            let year = date[0].parse::<i32>().unwrap();
+            let month = date[1].parse::<i32>().unwrap();
+        }
+    }
+
+    fn sort_by_date(&mut self) {
         let mut dates = self.dates.clone();
         dates.sort_by(|a, b| {
             let a = a.split('-').collect::<Vec<&str>>();
@@ -180,5 +220,17 @@ impl Dates {
 
             std::cmp::Ordering::Equal
         });
+
+        self.dates = dates;
     }
+}
+
+fn get_current_date() -> String {
+    let now = Local::now();
+    format!(
+        "{}-{}-{}",
+        now.year().to_string(),
+        now.month().to_string(),
+        now.day().to_string()
+    )
 }
