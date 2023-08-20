@@ -1,5 +1,5 @@
 use chrono::{Datelike, Local};
-use egui::{Color32, Key, TextEdit};
+use egui::{Color32, Key, ScrollArea, TextEdit};
 use itertools::Itertools;
 
 use crate::helper::{Demo, View};
@@ -11,8 +11,9 @@ pub struct Dates {
     dates: Vec<String>,
     input: String,
     input_field_color: Color32,
+    input_valid: bool,
     pub number_of_consecutive_months: usize,
-    has_dates_changed: bool,
+    pub number_of_events_last_year: usize,
 }
 
 impl Demo for Dates {
@@ -33,16 +34,26 @@ impl Demo for Dates {
 
 impl View for Dates {
     fn ui(&mut self, ui: &mut egui::Ui) {
-        for (index, date) in &mut self.dates.clone().into_iter().enumerate() {
-            ui.horizontal(|ui| {
-                let _input = ui.label(format!("{}", date));
-                let delete = ui.button("x");
-                delete.clicked().then(|| {
-                    self.has_dates_changed = true;
-                    self.dates.remove(index);
-                });
+        let screen_size = ui.ctx().input(|i| i.screen_rect.size());
+
+        let mut has_dates_changed = false;
+        let mut is_input_add_request = false;
+
+        egui::ScrollArea::vertical()
+            .max_height(screen_size.y / 2f32)
+            .stick_to_right(true)
+            .show(ui, |ui| {
+                for (index, date) in &mut self.dates.clone().into_iter().enumerate() {
+                    ui.horizontal(|ui| {
+                        let _input = ui.label(format!("{}", date));
+                        let delete = ui.button("x");
+                        delete.clicked().then(|| {
+                            has_dates_changed = true;
+                            self.dates.remove(index);
+                        });
+                    });
+                }
             });
-        }
 
         let input = TextEdit::singleline(&mut self.input).text_color(self.input_field_color);
         let input_response = ui.add(input);
@@ -53,34 +64,47 @@ impl View for Dates {
             .ctx
             .input(|i| i.key_pressed(Key::Enter))
             .then(|| {
-                self.has_dates_changed = true;
-                self.dates.push(self.input.clone());
-                self.input.clear();
+                is_input_add_request = true;
             });
 
         input_response.changed().then(|| {
             self.input_field_color = match check_if_valid_date(self.input.clone().as_str()) {
-                true => Color32::from_rgb(0, 255, 0),
-                false => Color32::from_rgb(255, 0, 0),
+                true => {
+                    self.input_valid = true;
+                    Color32::from_rgb(0, 255, 0)
+                }
+                false => {
+                    self.input_valid = false;
+                    Color32::from_rgb(255, 0, 0)
+                }
             };
             ui.ctx().request_repaint();
         });
 
         ui.button("+").clicked().then(|| {
-            self.has_dates_changed = true;
-            self.dates.push(self.input.clone());
-            self.input.clear();
+            is_input_add_request = true;
         });
 
-        if self.has_dates_changed {
+        if is_input_add_request && self.input_valid {
+            has_dates_changed = true;
+            self.dates.push(self.input.clone());
+            self.input.clear();
+        }
+
+        if has_dates_changed {
             self.sort_by_date();
             self.calculate_consecutive_months();
-            self.has_dates_changed = false;
+            self.calculate_number_of_events_last_year();
         }
 
         ui.label(format!(
             "Number of consecutive months: {}",
             self.number_of_consecutive_months
+        ));
+
+        ui.label(format!(
+            "Number of events last year: {}",
+            self.number_of_events_last_year
         ));
     }
 }
@@ -173,17 +197,34 @@ impl Dates {
         self.number_of_consecutive_months = conesecutive_months;
     }
 
-    fn calculate_how_many_dates_in_last_year(&mut self) {
+    fn calculate_number_of_events_last_year(&mut self) {
         self.sort_by_date();
 
-        let mut dates_in_last_year = 0;
+        let mut events_last_year = 0;
+
+        let current_date = Local::now();
+        let current_year = current_date.year();
+        let current_month = current_date.month() as i32;
 
         for date in self.dates.iter().rev() {
             let date = date.split('-').collect::<Vec<&str>>();
 
             let year = date[0].parse::<i32>().unwrap();
             let month = date[1].parse::<i32>().unwrap();
+
+            let month_difference = current_month - month;
+            let year_difference = current_year - year;
+
+            if year_difference == 0 {
+                events_last_year += 1;
+            } else if year_difference == 1 && month_difference < 0 {
+                events_last_year += 1;
+            } else {
+                break;
+            }
         }
+
+        self.number_of_events_last_year = events_last_year;
     }
 
     fn sort_by_date(&mut self) {

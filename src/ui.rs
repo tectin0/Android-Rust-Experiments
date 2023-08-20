@@ -53,7 +53,7 @@ impl MainWindows {
             (Heading, FontId::new(30.0, Proportional)),
             (Name("Heading2".into()), FontId::new(25.0, Proportional)),
             (Name("Context".into()), FontId::new(23.0, Proportional)),
-            (Body, FontId::new(18.0, Proportional)),
+            (Body, FontId::new(32.0, Proportional)),
             (Monospace, FontId::new(14.0, Proportional)),
             (Button, FontId::new(24.0, Proportional)),
             (Small, FontId::new(10.0, Proportional)),
@@ -62,7 +62,10 @@ impl MainWindows {
 
         ctx.set_style(style);
 
-        if is_mobile(ctx) {
+        self.home.number_of_consecutive_months = self.dates.number_of_consecutive_months;
+        self.home.number_of_events_last_year = self.dates.number_of_events_last_year;
+
+        if is_mobile() {
             self.mobile_ui(ctx);
         } else {
             self.desktop_ui(ctx);
@@ -78,7 +81,6 @@ impl MainWindows {
     }
 
     fn desktop_ui(&mut self, ctx: &Context) {
-        self.home.number_of_consecutive_months = self.dates.number_of_consecutive_months;
         self.show_main_gui(ctx);
         self.show_about(ctx);
     }
