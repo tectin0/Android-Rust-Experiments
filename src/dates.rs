@@ -1,17 +1,26 @@
-use chrono::{Datelike, Local};
-use egui::{Color32, Key, ScrollArea, TextEdit};
-use itertools::Itertools;
+use std::ops::Mul;
 
-use crate::helper::{Demo, View};
+use chrono::{Datelike, Local};
+use egui::{
+    plot::Text, Color32, ComboBox, Key, Label, RichText, ScrollArea, SelectableLabel, Sense, Style,
+    TextEdit, TextStyle, WidgetText,
+};
+use itertools::Itertools;
+use wgpu::RequestAdapterOptions;
+
+use crate::{
+    helper::{Demo, View},
+    RepaintSignal,
+};
 
 #[derive(Default)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(default))]
 pub struct Dates {
-    dates: Vec<String>,
-    input: String,
-    input_field_color: Color32,
-    input_valid: bool,
+    dates: Vec<(i32, u32, u32)>,
+    selected_year: i32,
+    selected_month: u32,
+    selected_day: u32,
     pub number_of_consecutive_months: usize,
     pub number_of_events_last_year: usize,
 }
@@ -45,7 +54,13 @@ impl View for Dates {
             .show(ui, |ui| {
                 for (index, date) in &mut self.dates.clone().into_iter().enumerate() {
                     ui.horizontal(|ui| {
-                        let _input = ui.label(format!("{}", date));
+                        let label = Label::new(format!("{}-{}-{}", date.0, date.1, date.2));
+
+                        let _input = ui.add_sized(
+                            [ui.available_width() - 50.0, ui.spacing().interact_size.y],
+                            label,
+                        );
+
                         let delete = ui.button("x");
                         delete.clicked().then(|| {
                             has_dates_changed = true;
@@ -55,40 +70,76 @@ impl View for Dates {
                 }
             });
 
-        let input = TextEdit::singleline(&mut self.input).text_color(self.input_field_color);
-        let input_response = ui.add(input);
+        let mut selected_year = if self.selected_year == 0 {
+            Local::now().year()
+        } else {
+            self.selected_year
+        };
 
-        input_response.request_focus();
+        let mut selected_month = if self.selected_month == 0 {
+            Local::now().month()
+        } else {
+            self.selected_month
+        };
 
-        input_response
-            .ctx
-            .input(|i| i.key_pressed(Key::Enter))
-            .then(|| {
-                is_input_add_request = true;
-            });
+        let mut selected_day = if self.selected_day == 0 {
+            Local::now().day()
+        } else {
+            self.selected_day
+        };
 
-        input_response.changed().then(|| {
-            self.input_field_color = match check_if_valid_date(self.input.clone().as_str()) {
-                true => {
-                    self.input_valid = true;
-                    Color32::from_rgb(0, 255, 0)
-                }
-                false => {
-                    self.input_valid = false;
-                    Color32::from_rgb(255, 0, 0)
-                }
-            };
-            ui.ctx().request_repaint();
+        ui.horizontal(|ui| {
+            ui.set_height(100.0);
+
+            let year_input = egui::ComboBox::from_id_source(0)
+                .selected_text(
+                    <WidgetText>::from(selected_year.to_string())
+                        .text_style(TextStyle::Name("DateInputButton".into())),
+                )
+                .show_ui(ui, |ui| {
+                    let current_year = Local::now().year();
+                    for year in ((current_year - 15)..=current_year).rev() {
+                        add_selectable_draggable_label(&mut selected_year, year, ui);
+                    }
+                });
+
+            self.selected_year = selected_year;
+
+            let month_input = egui::ComboBox::from_id_source(1)
+                .selected_text(
+                    <WidgetText>::from(selected_month.to_string())
+                        .text_style(TextStyle::Name("DateInputButton".into())),
+                )
+                .show_ui(ui, |ui| {
+                    for month in 1..=12 {
+                        add_selectable_draggable_label(&mut selected_month, month, ui);
+                    }
+                });
+
+            self.selected_month = selected_month;
+
+            let day_input = egui::ComboBox::from_id_source(2)
+                .selected_text(
+                    <WidgetText>::from(selected_day.to_string())
+                        .text_style(TextStyle::Name("DateInputButton".into())),
+                )
+                .show_ui(ui, |ui| {
+                    for day in 1..=31 {
+                        add_selectable_draggable_label(&mut selected_day, day, ui);
+                    }
+                });
+
+            self.selected_day = selected_day;
         });
 
         ui.button("+").clicked().then(|| {
             is_input_add_request = true;
         });
 
-        if is_input_add_request && self.input_valid {
+        if is_input_add_request {
             has_dates_changed = true;
-            self.dates.push(self.input.clone());
-            self.input.clear();
+            self.dates
+                .push((selected_year, selected_month, selected_day));
         }
 
         if has_dates_changed {
@@ -106,6 +157,31 @@ impl View for Dates {
             "Number of events last year: {}",
             self.number_of_events_last_year
         ));
+    }
+}
+
+fn add_selectable_draggable_label<T: Copy + Clone + PartialEq + ToString>(
+    selected_value: &mut T,
+    value: T,
+    ui: &mut egui::Ui,
+) {
+    let selectable_label = SelectableLabel::new(*selected_value == value, value.to_string());
+
+    let mut response = ui.add(selectable_label);
+
+    let _ = response.interact(Sense::click_and_drag());
+
+    if response.clicked() && *selected_value != value {
+        *selected_value = value;
+        response.mark_changed();
+    }
+
+    if response.dragged() {
+        let drag_delta = response.drag_delta();
+
+        if drag_delta.y.abs() > 0.0 {
+            ui.scroll_with_delta(drag_delta.mul(0.75));
+        }
     }
 }
 
@@ -147,15 +223,12 @@ impl Dates {
 
         let current_date = Local::now();
         let current_year = current_date.year();
-        let current_month = current_date.month() as i32;
+        let current_month = current_date.month();
 
-        let last_date = self.dates.last().unwrap();
+        let (last_year, last_month, last_day) = self.dates.last().unwrap();
 
-        let last_year = last_date.split('-').collect::<Vec<&str>>()[0];
-        let last_month = last_date.split('-').collect::<Vec<&str>>()[1];
-
-        let month_difference = current_month - last_month.parse::<i32>().unwrap();
-        let year_difference = current_year - last_year.parse::<i32>().unwrap();
+        let month_difference = current_month as i32 - *last_month as i32;
+        let year_difference = current_year - last_year;
 
         if month_difference == 0 && year_difference == 0 {
             conesecutive_months += 1;
@@ -168,17 +241,10 @@ impl Dates {
             return;
         }
 
-        for (date, previous_date) in self.dates.iter().rev().tuple_windows() {
-            let previous_date = previous_date.split('-').collect::<Vec<&str>>();
-            let date = date.split('-').collect::<Vec<&str>>();
-
-            let previous_year = previous_date[0].parse::<i32>().unwrap();
-            let previous_month = previous_date[1].parse::<i32>().unwrap();
-
-            let year = date[0].parse::<i32>().unwrap();
-            let month = date[1].parse::<i32>().unwrap();
-
-            let month_difference = month - previous_month;
+        for ((year, month, day), (previous_year, previous_month, previous_day)) in
+            self.dates.iter().rev().tuple_windows()
+        {
+            let month_difference = *month as i32 - *previous_month as i32;
             let year_difference = year - previous_year;
 
             if month_difference == 0 && year_difference == 0 {
@@ -204,14 +270,9 @@ impl Dates {
 
         let current_date = Local::now();
         let current_year = current_date.year();
-        let current_month = current_date.month() as i32;
+        let current_month = current_date.month();
 
-        for date in self.dates.iter().rev() {
-            let date = date.split('-').collect::<Vec<&str>>();
-
-            let year = date[0].parse::<i32>().unwrap();
-            let month = date[1].parse::<i32>().unwrap();
-
+        for (year, month, day) in self.dates.iter().rev() {
             let month_difference = current_month - month;
             let year_difference = current_year - year;
 
@@ -229,18 +290,7 @@ impl Dates {
 
     fn sort_by_date(&mut self) {
         let mut dates = self.dates.clone();
-        dates.sort_by(|a, b| {
-            let a = a.split('-').collect::<Vec<&str>>();
-            let b = b.split('-').collect::<Vec<&str>>();
-
-            let a_year = a[0].parse::<i32>().unwrap();
-            let a_month = a[1].parse::<i32>().unwrap();
-            let a_day = a[2].parse::<i32>().unwrap();
-
-            let b_year = b[0].parse::<i32>().unwrap();
-            let b_month = b[1].parse::<i32>().unwrap();
-            let b_day = b[2].parse::<i32>().unwrap();
-
+        dates.sort_by(|(a_year, a_month, a_day), (b_year, b_month, b_day)| {
             if a_year < b_year {
                 return std::cmp::Ordering::Less;
             } else if a_year > b_year {

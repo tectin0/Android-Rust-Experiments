@@ -1,8 +1,8 @@
 use std::default;
 
 use egui::{
-    Button, CentralPanel, Context, FontId, Id, Modifiers, RichText, Separator, Style, TextStyle,
-    Ui, Vec2, WidgetText,
+    Button, CentralPanel, Context, FontId, Id, Label, Modifiers, RichText, Separator, Style,
+    TextStyle, Ui, Vec2, WidgetText,
 };
 
 use egui::TextStyle::*;
@@ -57,6 +57,14 @@ impl MainWindows {
             (Monospace, FontId::new(14.0, Proportional)),
             (Button, FontId::new(24.0, Proportional)),
             (Small, FontId::new(10.0, Proportional)),
+            (
+                Name("DateInputButton".into()),
+                FontId::new(45.0, Proportional),
+            ),
+            (
+                Name("BottomBarButton".into()),
+                FontId::new(35.0, Proportional),
+            ),
         ]
         .into();
 
@@ -93,29 +101,29 @@ impl MainWindows {
     fn bottom_bar(&mut self, ctx: &Context) {
         let screen_size = ctx.input(|i| i.screen_rect.size());
         let bottom_panel_height = screen_size.y / 10.0;
-        let button_width = screen_size.x / 3.0 - 5.0;
+        let button_width = screen_size.x / 3.0 - 20.0;
 
         let bottom_panel =
             egui::TopBottomPanel::bottom(Id::new("bottom_bar")).exact_height(bottom_panel_height);
 
         bottom_panel.show(ctx, |ui| {
             ui.horizontal(|ui| {
-                let home_button = Button::new(RichText::new("Home"))
+                let home_button = Button::new(RichText::new("Home").size(40.0))
                     .min_size(Vec2::new(button_width, bottom_panel_height));
 
                 ui.add(home_button).clicked().then(|| {
                     self.main_window_state = MainWindowState::Main;
                 });
 
-                let dates_button =
-                    Button::new("Dates").min_size(Vec2::new(button_width, bottom_panel_height));
+                let dates_button = Button::new(RichText::new("Dates").size(40.0))
+                    .min_size(Vec2::new(button_width, bottom_panel_height));
 
                 ui.add(dates_button).clicked().then(|| {
                     self.main_window_state = MainWindowState::Dates;
                 });
 
-                let quit_button =
-                    Button::new("Quit").min_size(Vec2::new(button_width, bottom_panel_height));
+                let quit_button = Button::new(RichText::new("Quit").size(40.0))
+                    .min_size(Vec2::new(button_width, bottom_panel_height));
 
                 ui.add(quit_button).clicked().then(|| std::process::exit(0));
             });
