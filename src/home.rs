@@ -1,3 +1,5 @@
+use egui::RichText;
+
 use crate::helper::View;
 
 #[derive(Default)]
@@ -10,19 +12,24 @@ pub struct Home {
 
 impl View for Home {
     fn ui(&mut self, ui: &mut egui::Ui) {
-        ui.heading("Infos");
-        ui.vertical_centered(|ui| {
-            ui.label(format!(
+        ui.vertical(|ui| {
+            let consecutive_months_text = RichText::new(format!(
                 "Consecutive Months: {}",
                 self.number_of_consecutive_months
-            ));
+            ))
+            .size(40.0);
 
-            ui.separator();
+            ui.label(consecutive_months_text);
 
-            ui.label(format!(
+            // ui.separator();
+
+            let events_last_year_text = RichText::new(format!(
                 "Events Last Year: {}",
                 self.number_of_events_last_year
-            ));
+            ))
+            .size(40.0);
+
+            ui.label(events_last_year_text);
         });
     }
 }

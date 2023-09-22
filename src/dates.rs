@@ -1,28 +1,41 @@
 use std::ops::Mul;
 
 use chrono::{Datelike, Local};
-use egui::{
-    plot::Text, Color32, ComboBox, Key, Label, RichText, ScrollArea, SelectableLabel, Sense, Style,
-    TextEdit, TextStyle, WidgetText,
-};
+use egui::{Label, SelectableLabel, Sense, TextStyle, WidgetText};
 use itertools::Itertools;
-use wgpu::RequestAdapterOptions;
 
 use crate::{
     helper::{Demo, View},
-    RepaintSignal,
+    io::{read_from_file, write_to_file},
 };
 
-#[derive(Default)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(default))]
 pub struct Dates {
-    dates: Vec<(i32, u32, u32)>,
+    pub dates: Vec<(i32, u32, u32)>,
     selected_year: i32,
     selected_month: u32,
     selected_day: u32,
     pub number_of_consecutive_months: usize,
     pub number_of_events_last_year: usize,
+}
+
+impl Default for Dates {
+    fn default() -> Self {
+        let mut dates = Self {
+            dates: read_from_file(),
+            selected_year: 0,
+            selected_month: 0,
+            selected_day: 0,
+            number_of_consecutive_months: 0,
+            number_of_events_last_year: 0,
+        };
+
+        dates.calculate_consecutive_months();
+        dates.calculate_number_of_events_last_year();
+
+        dates
+    }
 }
 
 impl Demo for Dates {
@@ -91,7 +104,7 @@ impl View for Dates {
         ui.horizontal(|ui| {
             ui.set_height(100.0);
 
-            let year_input = egui::ComboBox::from_id_source(0)
+            let _year_input = egui::ComboBox::from_id_source(0)
                 .selected_text(
                     <WidgetText>::from(selected_year.to_string())
                         .text_style(TextStyle::Name("DateInputButton".into())),
@@ -105,7 +118,7 @@ impl View for Dates {
 
             self.selected_year = selected_year;
 
-            let month_input = egui::ComboBox::from_id_source(1)
+            let _month_input = egui::ComboBox::from_id_source(1)
                 .selected_text(
                     <WidgetText>::from(selected_month.to_string())
                         .text_style(TextStyle::Name("DateInputButton".into())),
@@ -118,7 +131,7 @@ impl View for Dates {
 
             self.selected_month = selected_month;
 
-            let day_input = egui::ComboBox::from_id_source(2)
+            let _day_input = egui::ComboBox::from_id_source(2)
                 .selected_text(
                     <WidgetText>::from(selected_day.to_string())
                         .text_style(TextStyle::Name("DateInputButton".into())),
@@ -146,15 +159,16 @@ impl View for Dates {
             self.sort_by_date();
             self.calculate_consecutive_months();
             self.calculate_number_of_events_last_year();
+            write_to_file(self.dates.clone());
         }
 
         ui.label(format!(
-            "Number of consecutive months: {}",
+            "Consecutive months: {}",
             self.number_of_consecutive_months
         ));
 
         ui.label(format!(
-            "Number of events last year: {}",
+            "Events last year: {}",
             self.number_of_events_last_year
         ));
     }
@@ -185,35 +199,6 @@ fn add_selectable_draggable_label<T: Copy + Clone + PartialEq + ToString>(
     }
 }
 
-fn check_if_valid_date(date: &str) -> bool {
-    let date = date.split('-').collect::<Vec<&str>>();
-    if date.len() != 3 {
-        return false;
-    }
-
-    let year = date[0].parse::<i32>();
-    let month = date[1].parse::<i32>();
-    let day = date[2].parse::<i32>();
-
-    if year.is_err() || month.is_err() || day.is_err() {
-        return false;
-    }
-
-    let year = year.unwrap();
-    let month = month.unwrap();
-    let day = day.unwrap();
-
-    if year < 0 || month < 0 || day < 0 {
-        return false;
-    }
-
-    if month > 12 || day > 31 {
-        return false;
-    }
-
-    true
-}
-
 impl Dates {
     /// Calculates in how many consecutive months the user has been active
     fn calculate_consecutive_months(&mut self) {
@@ -225,7 +210,7 @@ impl Dates {
         let current_year = current_date.year();
         let current_month = current_date.month();
 
-        let (last_year, last_month, last_day) = self.dates.last().unwrap();
+        let (last_year, last_month, _last_day) = self.dates.last().unwrap();
 
         let month_difference = current_month as i32 - *last_month as i32;
         let year_difference = current_year - last_year;
@@ -241,7 +226,7 @@ impl Dates {
             return;
         }
 
-        for ((year, month, day), (previous_year, previous_month, previous_day)) in
+        for ((year, month, _day), (previous_year, previous_month, _previous_dayy)) in
             self.dates.iter().rev().tuple_windows()
         {
             let month_difference = *month as i32 - *previous_month as i32;
@@ -272,8 +257,8 @@ impl Dates {
         let current_year = current_date.year();
         let current_month = current_date.month();
 
-        for (year, month, day) in self.dates.iter().rev() {
-            let month_difference = current_month - month;
+        for (year, month, _day) in self.dates.iter().rev() {
+            let month_difference = current_month as i32 - *month as i32;
             let year_difference = current_year - year;
 
             if year_difference == 0 {
@@ -314,14 +299,4 @@ impl Dates {
 
         self.dates = dates;
     }
-}
-
-fn get_current_date() -> String {
-    let now = Local::now();
-    format!(
-        "{}-{}-{}",
-        now.year().to_string(),
-        now.month().to_string(),
-        now.day().to_string()
-    )
 }

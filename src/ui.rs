@@ -1,18 +1,14 @@
-use std::default;
-
-use egui::{
-    Button, CentralPanel, Context, FontId, Id, Label, Modifiers, RichText, Separator, Style,
-    TextStyle, Ui, Vec2, WidgetText,
-};
+use egui::{Button, CentralPanel, Context, FontId, Id, RichText};
 
 use egui::TextStyle::*;
 
 use egui::FontFamily::Proportional;
 
+use crate::helper::Demo;
 use crate::{
     about::About,
     dates::Dates,
-    helper::{is_mobile, Demo, View},
+    helper::{is_mobile, View},
     home::Home,
 };
 
@@ -50,8 +46,7 @@ impl MainWindows {
         let mut style = (*ctx.style()).clone();
 
         style.text_styles = [
-            (Heading, FontId::new(30.0, Proportional)),
-            (Name("Heading2".into()), FontId::new(25.0, Proportional)),
+            (Heading, FontId::new(45.0, Proportional)),
             (Name("Context".into()), FontId::new(23.0, Proportional)),
             (Body, FontId::new(32.0, Proportional)),
             (Monospace, FontId::new(14.0, Proportional)),
@@ -81,18 +76,19 @@ impl MainWindows {
     }
 
     fn mobile_ui(&mut self, ctx: &Context) {
-        let screen_size = ctx.input(|i| i.screen_rect.size());
-        let default_width = (screen_size.x - 20.0).min(400.0);
+        // let screen_size = ctx.input(|i| i.screen_rect.size());
+        // let default_width = (screen_size.x - 20.0).min(400.0);
 
         self.show_main_gui(ctx);
-        self.show_about(ctx);
+        // self.show_about(ctx);
     }
 
     fn desktop_ui(&mut self, ctx: &Context) {
         self.show_main_gui(ctx);
-        self.show_about(ctx);
+        // self.show_about(ctx);
     }
 
+    #[allow(dead_code)]
     /// Show the about window.
     fn show_about(&mut self, ctx: &Context) {
         self.about.show(ctx, &mut self.is_about_open);
@@ -101,31 +97,34 @@ impl MainWindows {
     fn bottom_bar(&mut self, ctx: &Context) {
         let screen_size = ctx.input(|i| i.screen_rect.size());
         let bottom_panel_height = screen_size.y / 10.0;
-        let button_width = screen_size.x / 3.0 - 20.0;
+        let button_width = screen_size.x / 3.0 - 10.0;
 
         let bottom_panel =
             egui::TopBottomPanel::bottom(Id::new("bottom_bar")).exact_height(bottom_panel_height);
 
         bottom_panel.show(ctx, |ui| {
             ui.horizontal(|ui| {
-                let home_button = Button::new(RichText::new("Home").size(40.0))
-                    .min_size(Vec2::new(button_width, bottom_panel_height));
+                let home_button = Button::new(RichText::new("Home").size(40.0));
 
-                ui.add(home_button).clicked().then(|| {
-                    self.main_window_state = MainWindowState::Main;
-                });
+                ui.add_sized([button_width, bottom_panel_height / 2.0], home_button)
+                    .clicked()
+                    .then(|| {
+                        self.main_window_state = MainWindowState::Main;
+                    });
 
-                let dates_button = Button::new(RichText::new("Dates").size(40.0))
-                    .min_size(Vec2::new(button_width, bottom_panel_height));
+                let dates_button = Button::new(RichText::new("Dates").size(40.0));
 
-                ui.add(dates_button).clicked().then(|| {
-                    self.main_window_state = MainWindowState::Dates;
-                });
+                ui.add_sized([button_width, bottom_panel_height / 2.0], dates_button)
+                    .clicked()
+                    .then(|| {
+                        self.main_window_state = MainWindowState::Dates;
+                    });
 
-                let quit_button = Button::new(RichText::new("Quit").size(40.0))
-                    .min_size(Vec2::new(button_width, bottom_panel_height));
+                let quit_button = Button::new(RichText::new("Quit").size(40.0));
 
-                ui.add(quit_button).clicked().then(|| std::process::exit(0));
+                ui.add_sized([button_width, bottom_panel_height / 2.0], quit_button)
+                    .clicked()
+                    .then(|| std::process::exit(0));
             });
         });
     }
