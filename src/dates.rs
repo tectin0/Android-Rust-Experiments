@@ -261,9 +261,7 @@ impl Dates {
             let month_difference = current_month as i32 - *month as i32;
             let year_difference = current_year - year;
 
-            if year_difference == 0 {
-                events_last_year += 1;
-            } else if year_difference == 1 && month_difference < 0 {
+            if year_difference == 0 || (year_difference == 1 && month_difference < 0) {
                 events_last_year += 1;
             } else {
                 break;
@@ -276,23 +274,23 @@ impl Dates {
     fn sort_by_date(&mut self) {
         let mut dates = self.dates.clone();
         dates.sort_by(|(a_year, a_month, a_day), (b_year, b_month, b_day)| {
-            if a_year < b_year {
-                return std::cmp::Ordering::Less;
-            } else if a_year > b_year {
-                return std::cmp::Ordering::Greater;
-            }
+            match a_year.cmp(b_year) {
+                std::cmp::Ordering::Less => return std::cmp::Ordering::Less,
+                std::cmp::Ordering::Greater => return std::cmp::Ordering::Greater,
+                std::cmp::Ordering::Equal => (),
+            };
 
-            if a_month < b_month {
-                return std::cmp::Ordering::Less;
-            } else if a_month > b_month {
-                return std::cmp::Ordering::Greater;
-            }
+            match a_month.cmp(b_month) {
+                std::cmp::Ordering::Less => return std::cmp::Ordering::Less,
+                std::cmp::Ordering::Greater => return std::cmp::Ordering::Greater,
+                std::cmp::Ordering::Equal => (),
+            };
 
-            if a_day < b_day {
-                return std::cmp::Ordering::Less;
-            } else if a_day > b_day {
-                return std::cmp::Ordering::Greater;
-            }
+            match a_day.cmp(b_day) {
+                std::cmp::Ordering::Less => return std::cmp::Ordering::Less,
+                std::cmp::Ordering::Greater => return std::cmp::Ordering::Greater,
+                std::cmp::Ordering::Equal => (),
+            };
 
             std::cmp::Ordering::Equal
         });
