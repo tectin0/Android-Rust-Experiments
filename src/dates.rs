@@ -215,11 +215,9 @@ impl Dates {
         let month_difference = current_month as i32 - *last_month as i32;
         let year_difference = current_year - last_year;
 
-        if month_difference == 0 && year_difference == 0 {
-            conesecutive_months += 1;
-        } else if month_difference == 1 && year_difference == 0 {
-            conesecutive_months += 1;
-        } else if month_difference == -11 && year_difference == 1 {
+        if !(year_difference != 0 || month_difference != 0 && month_difference != 1)
+            || (month_difference == -11 && year_difference == 1)
+        {
             conesecutive_months += 1;
         } else {
             self.number_of_consecutive_months = conesecutive_months;
@@ -236,9 +234,9 @@ impl Dates {
                 continue;
             }
 
-            if month_difference == 1 && year_difference == 0 {
-                conesecutive_months += 1;
-            } else if month_difference == -11 && year_difference == 1 {
+            if (month_difference == 1 && year_difference == 0)
+                || (month_difference == -11 && year_difference == 1)
+            {
                 conesecutive_months += 1;
             } else {
                 break;
