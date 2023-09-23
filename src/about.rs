@@ -24,7 +24,7 @@ pub struct About {}
 
 impl Demo for About {
     fn name(&self) -> &'static str {
-        "About egui"
+        "About"
     }
 
     fn show(&mut self, ctx: &egui::Context, open: &mut bool) {

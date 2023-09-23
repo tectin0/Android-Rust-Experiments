@@ -103,7 +103,7 @@ impl MainWindows {
             egui::TopBottomPanel::bottom(Id::new("bottom_bar")).exact_height(bottom_panel_height);
 
         bottom_panel.show(ctx, |ui| {
-            ui.horizontal(|ui| {
+            ui.horizontal_top(|ui| {
                 let home_button = Button::new(RichText::new("Home").size(40.0));
 
                 ui.add_sized([button_width, bottom_panel_height / 2.0], home_button)
