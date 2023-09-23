@@ -31,8 +31,11 @@ impl Default for Dates {
             number_of_events_last_year: 0,
         };
 
-        dates.calculate_consecutive_months();
-        dates.calculate_number_of_events_last_year();
+        if !dates.dates.is_empty() {
+            dates.sort_by_date();
+            dates.calculate_consecutive_months();
+            dates.calculate_number_of_events_last_year();
+        }
 
         dates
     }

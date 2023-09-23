@@ -4,8 +4,14 @@ use std::{
     path::Path,
 };
 
+use crate::constants::STORAGE_PATH;
+
 pub(crate) fn write_to_file(dates: Vec<(i32, u32, u32)>) {
-    let mut file = fs::File::create("dates.dat").unwrap();
+    if !Path::new(STORAGE_PATH).exists() {
+        fs::create_dir(STORAGE_PATH).unwrap();
+    }
+
+    let mut file = fs::File::create(format!("{}/dates.dat", STORAGE_PATH)).unwrap();
 
     for (year, month, day) in dates {
         let date = format!("{} {} {}\n", year, month, day);
@@ -16,11 +22,11 @@ pub(crate) fn write_to_file(dates: Vec<(i32, u32, u32)>) {
 pub(crate) fn read_from_file() -> Vec<(i32, u32, u32)> {
     let mut dates = Vec::new();
 
-    if !Path::new("dates.dat").exists() {
+    if !Path::new(&format!("{}/dates.dat", STORAGE_PATH)).exists() {
         return dates;
     }
 
-    let file = fs::File::open("dates.dat").unwrap();
+    let file = fs::File::open(format!("{}/dates.dat", STORAGE_PATH)).unwrap();
     let reader = BufReader::new(file);
 
     for line in reader.lines() {
